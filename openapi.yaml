@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: nexmedis_backend
+  version: 1.0.0
+  description: API documentation generated from Postman Collection
+servers:
+  - url: "{HOST}"
+    description: Primary Server
+    variables:
+      HOST:
+        default: "http://localhost:8080" # Default placeholder, sesuaikan jika perlu
+        description: Base URL for the API
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- Shared Schemas ---
+    StandardResponse:
+      type: object
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+
+    ClientRequest:
+      type: object
+      properties:
+        client_id:
+          type: string
+          example: "client_003"
+        name:
+          type: string
+          example: "Test"
+        email:
+          type: string
+          format: email
+          example: "admin@test3.com"
+
+paths:
+  # ----------------------------
+  # Group: Protected
+  # ----------------------------
+
+  /api/logs:
+    post:
+      summary: Logs
+      tags:
+        - Protected
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardResponse'
+              example:
+                status: true
+                message: "success"
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Unauthorized"
+        '403':
+          description: Forbidden IP Whitelist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "ip not allowed"
+
+  /api/usage/daily:
+    get:
+      summary: Usage Daily
+      tags:
+        - Protected
+      security:
+        - ApiKeyAuth: []
+          BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        total_requests:
+                          type: integer
+              example:
+                status: true
+                message: "success"
+                data:
+                  - date: "2026-01-01"
+                    total_requests: 1004
+                  - date: "2025-12-31"
+                    total_requests: 0
+                  - date: "2025-12-30"
+                    total_requests: 0
+
+  /api/usage/top:
+    get:
+      summary: Top Usage
+      tags:
+        - Protected
+      security:
+        - ApiKeyAuth: []
+          BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        client_id:
+                          type: string
+                        total_requests:
+                          type: integer
+              example:
+                status: true
+                message: "success"
+                data:
+                  - client_id: "client_001"
+                    total_requests: 1004
+
+  /api/token:
+    post:
+      summary: JWT Issued
+      tags:
+        - Protected
+      # Berdasarkan 'originalRequest' di response Success, tidak ada header auth yang dikirim
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                client_id:
+                  type: string
+                  example: "client_001"
+                name:
+                  type: string
+                  example: "Acme Corp"
+                email:
+                  type: string
+                  format: email
+                  example: "admin@acme.com"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+              example:
+                status: true
+                message: "success"
+                data:
+                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+  /api/whitelist:
+    post:
+      summary: IP Whitelist
+      tags:
+        - Protected
+      security:
+        - ApiKeyAuth: []
+          BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ips:
+                  type: array
+                  items:
+                    type: string
+              example:
+                ips:
+                  - "127.0.0.1"
+                  - "192.168.1.10"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+              example:
+                status: true
+                message: "success"
+
+  /api/usage/stream:
+    get:
+      summary: Stream Data (SSE)
+      tags:
+        - Protected
+      security:
+        - ApiKeyAuth: []
+          BearerAuth: []
+      responses:
+        '200':
+          description: Server-Sent Events Stream
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "no-cache"
+            Connection:
+              schema:
+                type: string
+                example: "keep-alive"
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: "Stream of JSON data objects prefixed with 'data: '"
+              # Contoh disingkat untuk keterbacaan, aslinya sangat panjang
+              example: |
+                data: {"status":true,"message":"success","data":[{"date":"2026-01-02","total_requests":16}]}
+                
+                data: {"status":true,"message":"success","data":[{"date":"2026-01-02","total_requests":16}]}
+
+  # ----------------------------
+  # Root Level Items
+  # ----------------------------
+
+  /api/register:
+    post:
+      summary: Register Client
+      tags:
+        - Public
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+            example:
+              client_id: "client_005"
+              name: "Test"
+              email: "admin@test3.com"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      api_key:
+                        type: string
+              example:
+                status: true
+                message: "success"
+                data:
+                  api_key: "86a4fa016265433ffc3e7c96a70230a7cf21faeb3e4198b74c3b23f7f099759f"
+        '400':
+          description: Bad Request (Duplicate or Invalid)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+              examples:
+                DuplicateError:
+                  value:
+                    status: false
+                    message: "client already exists"
+                InvalidRequest:
+                  value:
+                    status: false
+                    message: "invalid request body"
+
+  /health:
+    get:
+      summary: Health Check
+      tags:
+        - Public
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+              example:
+                status: "ok"
